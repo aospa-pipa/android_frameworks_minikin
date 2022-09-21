@@ -50,6 +50,7 @@ cc_library {
         "LocaleListCache.cpp",
         "MeasuredText.cpp",
         "Measurement.cpp",
+        "MinikinFontFactory.cpp",
         "MinikinInternal.cpp",
         "OptimalLineBreaker.cpp",
         "SparseBitSet.cpp",
