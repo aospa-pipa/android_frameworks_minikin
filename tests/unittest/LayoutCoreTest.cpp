@@ -53,7 +53,7 @@ static std::shared_ptr<FontCollection> makeFontCollection(
     for (const auto& fontPath : fonts) {
         families.push_back(buildFontFamily(fontPath));
     }
-    return std::make_shared<FontCollection>(families);
+    return FontCollection::create(families);
 }
 
 TEST(LayoutPieceTest, doLayoutTest) {
