@@ -23,6 +23,7 @@
 
 #include <string>
 #include <vector>
+#include <unicode/uscript.h>
 
 #include "minikin/Characters.h"
 #include "minikin/U16StringPiece.h"
@@ -63,7 +64,12 @@ enum class HyphenationType : uint8_t {
     // Break the line, insert a ZWJ and hyphen at the first line, and a ZWJ at the second line.
     // This is used in Arabic script, mostly for writing systems of Central Asia. It's our default
     // behavior when a soft hyphen is used in Arabic script.
-    BREAK_AND_INSERT_HYPHEN_AND_ZWJ = 8
+    BREAK_AND_INSERT_HYPHEN_AND_ZWJ = 8,
+    // Break the line, and insert hyphen at current line and the beginning of the next line. It's
+    // very similar to BREAK_AND_INSERT_HYPHEN_AT_NEXT_LINE. BREAK_AND_INSERT_HYPHEN_AT_NEXT_LINE
+    // is for the words which included hyphenator but this is used to actively hyphenate words
+    // based on the pattern.
+    BREAK_AND_INSERT_HYPHEN_AT_CURRENT_AND_NEXT_LINE = 9
 };
 
 // The hyphen edit represents an edit to the string when a word is hyphenated.
@@ -229,6 +235,11 @@ private:
     // calculate hyphenation from patterns, assuming alphabet lookup has already been done
     void hyphenateFromCodes(const uint16_t* codes, size_t len, HyphenationType hyphenValue,
                             HyphenationType* out) const;
+
+    HyphenationType hyphenationTypeBasedOnScriptAndLocale(uint32_t codePoint) const;
+
+    bool isRepeatHyphen(UScriptCode script,
+                        HyphenationLocale locale) const;
 
     // See also LONGEST_HYPHENATED_WORD in LineBreaker.cpp. Here the constant is used so
     // that temporary buffers can be stack-allocated without waste, which is a slightly
