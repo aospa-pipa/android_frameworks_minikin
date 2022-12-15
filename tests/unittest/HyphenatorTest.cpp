@@ -121,6 +121,18 @@ TEST(HyphenatorTest, polishEnDash) {
     EXPECT_EQ(HyphenationType::BREAK_AND_DONT_INSERT_HYPHEN, result[2]);
 }
 
+// If there is a soft hyphen in Polish, the hyphen should be repeated on the next line.
+TEST(HyphenatorTest, polishSoftHyphen) {
+    Hyphenator* hyphenator = Hyphenator::loadBinary(nullptr, 2, 2, "pl");
+    const uint16_t word[] = {'x', SOFT_HYPHEN, 'y'};
+    std::vector<HyphenationType> result;
+    hyphenator->hyphenate(word, &result);
+    EXPECT_EQ((size_t)3, result.size());
+    EXPECT_EQ(HyphenationType::DONT_BREAK, result[0]);
+    EXPECT_EQ(HyphenationType::DONT_BREAK, result[1]);
+    EXPECT_EQ(HyphenationType::BREAK_AND_INSERT_HYPHEN_AT_CURRENT_AND_NEXT_LINE, result[2]);
+}
+
 // If we break on a hyphen in Slovenian, the hyphen should be repeated on the next line. (Same as
 // Polish.)
 TEST(HyphenatorTest, slovenianHyphen) {
