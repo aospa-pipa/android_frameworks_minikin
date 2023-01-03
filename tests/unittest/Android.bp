@@ -79,9 +79,5 @@ cc_test {
         "WordBreakerTests.cpp",
     ],
 
-    cflags: [
-        "-Werror",
-        "-Wall",
-        "-Wextra",
-    ],
+    defaults: ["libminikin_defaults"],
 }
