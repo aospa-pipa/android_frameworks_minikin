@@ -335,6 +335,22 @@ uint32_t FontCollection::calcFamilyScore(uint32_t ch, uint32_t vs, FamilyVariant
     return coverageScore << 29 | localeScore << 1 | variantScore;
 }
 
+// Returns true if
+//  - the fontFamily is a developer specified custom fallback.
+//  - no custom fallback is provided and the fontFamily is a default fallback.
+bool FontCollection::isPrimaryFamily(const std::shared_ptr<FontFamily>& fontFamily) const {
+    // If the font family is provided by developers, it is primary.
+    if (fontFamily->isCustomFallback()) {
+        return true;
+    }
+
+    if (getFamilyAt(0)->isCustomFallback()) {
+        return false;
+    } else {
+        return fontFamily->isDefaultFallback();
+    }
+}
+
 // Calculates a font score based on variation sequence coverage.
 // - Returns kUnsupportedFontScore if the font doesn't support the variation sequence or its base
 //   character.
@@ -353,8 +369,7 @@ uint32_t FontCollection::calcCoverageScore(uint32_t ch, uint32_t vs, uint32_t lo
         return kUnsupportedFontScore;
     }
 
-    if ((vs == 0 || hasVSGlyph) &&
-        (getFamilyAt(0) == fontFamily || fontFamily->isCustomFallback())) {
+    if ((vs == 0 || hasVSGlyph) && isPrimaryFamily(fontFamily)) {
         // If the first font family supports the given character or variation sequence, always use
         // it.
         return kFirstFontScore;

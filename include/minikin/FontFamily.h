@@ -37,7 +37,7 @@ public:
                                               std::vector<std::shared_ptr<Font>>&& fonts);
     static std::shared_ptr<FontFamily> create(uint32_t localeListId, FamilyVariant variant,
                                               std::vector<std::shared_ptr<Font>>&& fonts,
-                                              bool isCustomFallback);
+                                              bool isCustomFallback, bool isDefaultFallback);
 
     FontFamily(FontFamily&&) = default;
     FontFamily& operator=(FontFamily&&) = default;
@@ -60,6 +60,7 @@ public:
     size_t getSupportedAxesCount() const { return mSupportedAxesCount; }
     AxisTag getSupportedAxisAt(size_t index) const { return mSupportedAxes[index]; }
     bool isCustomFallback() const { return mIsCustomFallback; }
+    bool isDefaultFallback() const { return mIsDefaultFallback; }
 
     // Get Unicode coverage.
     const SparseBitSet& getCoverage() const { return mCoverage; }
@@ -78,7 +79,8 @@ public:
 
 private:
     FontFamily(uint32_t localeListId, FamilyVariant variant,
-               std::vector<std::shared_ptr<Font>>&& fonts, bool isCustomFallback);
+               std::vector<std::shared_ptr<Font>>&& fonts, bool isCustomFallback,
+               bool isDefaultFallback);
     explicit FontFamily(BufferReader* reader, const std::shared_ptr<std::vector<Font>>& fonts);
 
     void writeTo(BufferWriter* writer, uint32_t* fontIndex) const;
@@ -100,6 +102,7 @@ private:
     FamilyVariant mVariant;            // 1 byte
     bool mIsColorEmoji;                // 1 byte
     bool mIsCustomFallback;            // 1 byte
+    bool mIsDefaultFallback;           // 1 byte
 
     MINIKIN_PREVENT_COPY_AND_ASSIGN(FontFamily);
 };
