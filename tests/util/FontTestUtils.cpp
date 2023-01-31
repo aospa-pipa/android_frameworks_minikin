@@ -109,8 +109,9 @@ std::vector<std::shared_ptr<FontFamily>> getFontFamilies(const std::string& font
             family = FontFamily::create(variant, std::move(fonts));
         } else {
             uint32_t langId = registerLocaleList(std::string((const char*)lang, xmlStrlen(lang)));
-            family = FontFamily::create(langId, variant, std::move(fonts),
-                                        false /* isCustomFallback */);
+            family =
+                    FontFamily::create(langId, variant, std::move(fonts),
+                                       false /* isCustomFallback */, false /* isdefaultFallback */);
         }
         families.push_back(family);
     }
@@ -135,7 +136,7 @@ std::shared_ptr<FontFamily> buildFontFamily(const std::string& filePath, const s
     std::vector<std::shared_ptr<Font>> fonts;
     fonts.push_back(Font::Builder(font).build());
     return FontFamily::create(LocaleListCache::getId(lang), FamilyVariant::DEFAULT,
-                              std::move(fonts), isCustomFallback);
+                              std::move(fonts), isCustomFallback, false /* isDefaultFallback */);
 }
 
 }  // namespace minikin
