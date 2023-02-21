@@ -85,10 +85,10 @@ cc_library {
     target: {
         android: {
             shared_libs: [
-                "libandroidicu",
+                "libicu",
             ],
             export_shared_lib_headers: [
-                "libandroidicu",
+                "libicu",
             ],
         },
         host: {
