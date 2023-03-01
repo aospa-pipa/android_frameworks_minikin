@@ -43,20 +43,22 @@ std::shared_ptr<FontFamily> FontFamily::create(std::vector<std::shared_ptr<Font>
 // static
 std::shared_ptr<FontFamily> FontFamily::create(FamilyVariant variant,
                                                std::vector<std::shared_ptr<Font>>&& fonts) {
-    return create(kEmptyLocaleListId, variant, std::move(fonts), false /* isCustomFallback */);
+    return create(kEmptyLocaleListId, variant, std::move(fonts), false /* isCustomFallback */,
+                  false /* isDefaultFallback */);
 }
 
 // static
 std::shared_ptr<FontFamily> FontFamily::create(uint32_t localeListId, FamilyVariant variant,
                                                std::vector<std::shared_ptr<Font>>&& fonts,
-                                               bool isCustomFallback) {
+                                               bool isCustomFallback, bool isDefaultFallback) {
     // TODO(b/174672300): Revert back to make_shared.
-    return std::shared_ptr<FontFamily>(
-            new FontFamily(localeListId, variant, std::move(fonts), isCustomFallback));
+    return std::shared_ptr<FontFamily>(new FontFamily(localeListId, variant, std::move(fonts),
+                                                      isCustomFallback, isDefaultFallback));
 }
 
 FontFamily::FontFamily(uint32_t localeListId, FamilyVariant variant,
-                       std::vector<std::shared_ptr<Font>>&& fonts, bool isCustomFallback)
+                       std::vector<std::shared_ptr<Font>>&& fonts, bool isCustomFallback,
+                       bool isDefaultFallback)
         : mFonts(std::make_unique<std::shared_ptr<Font>[]>(fonts.size())),
           // computeCoverage may update supported axes and coverages later.
           mSupportedAxes(nullptr),
@@ -69,7 +71,8 @@ FontFamily::FontFamily(uint32_t localeListId, FamilyVariant variant,
           mVariant(variant),
           mIsColorEmoji(LocaleListCache::getById(localeListId).getEmojiStyle() ==
                         EmojiStyle::EMOJI),
-          mIsCustomFallback(isCustomFallback) {
+          mIsCustomFallback(isCustomFallback),
+          mIsDefaultFallback(isDefaultFallback) {
     MINIKIN_ASSERT(!fonts.empty(), "FontFamily must contain at least one font.");
     MINIKIN_ASSERT(fonts.size() <= std::numeric_limits<uint32_t>::max(),
                    "Number of fonts must be less than 2^32.");
@@ -103,6 +106,7 @@ FontFamily::FontFamily(BufferReader* reader, const std::shared_ptr<std::vector<F
     }
     mIsColorEmoji = static_cast<bool>(reader->read<uint8_t>());
     mIsCustomFallback = static_cast<bool>(reader->read<uint8_t>());
+    mIsDefaultFallback = static_cast<bool>(reader->read<uint8_t>());
     mCoverage = SparseBitSet(reader);
     // Read mCmapFmt14Coverage. As it can have null entries, it is stored in the buffer as a sparse
     // array (size, non-null entry count, array of (index, entry)).
@@ -128,6 +132,7 @@ void FontFamily::writeTo(BufferWriter* writer, uint32_t* fontIndex) const {
     writer->writeArray<AxisTag>(mSupportedAxes.get(), mSupportedAxesCount);
     writer->write<uint8_t>(mIsColorEmoji);
     writer->write<uint8_t>(mIsCustomFallback);
+    writer->write<uint8_t>(mIsDefaultFallback);
     mCoverage.writeTo(writer);
     // Write mCmapFmt14Coverage as a sparse array (size, non-null entry count,
     // array of (index, entry))
@@ -337,7 +342,7 @@ std::shared_ptr<FontFamily> FontFamily::createFamilyWithVariation(
         }
     }
 
-    return create(mLocaleListId, mVariant, std::move(fonts), mIsCustomFallback);
+    return create(mLocaleListId, mVariant, std::move(fonts), mIsCustomFallback, mIsDefaultFallback);
 }
 
 }  // namespace minikin

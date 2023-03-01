@@ -938,7 +938,8 @@ TEST(FontCollectionItemizeTest, itemize_LocaleScore) {
         std::vector<std::shared_ptr<Font>> fonts;
         fonts.push_back(Font::Builder(firstFamilyMinikinFont).build());
         auto firstFamily = FontFamily::create(registerLocaleList("und"), FamilyVariant::DEFAULT,
-                                              std::move(fonts), false /* isCustomFallback */);
+                                              std::move(fonts), false /* isCustomFallback */,
+                                              false /* isDefaultFallback */);
         families.push_back(firstFamily);
 
         // Prepare font families
@@ -951,9 +952,9 @@ TEST(FontCollectionItemizeTest, itemize_LocaleScore) {
                     std::make_shared<FreeTypeMinikinFontForTest>(getTestFontPath(kJAFont));
             std::vector<std::shared_ptr<Font>> fonts;
             fonts.push_back(Font::Builder(minikinFont).build());
-            auto family = FontFamily::create(registerLocaleList(testCase.fontLocales[i]),
-                                             FamilyVariant::DEFAULT, std::move(fonts),
-                                             false /* isCustomFallback */);
+            auto family = FontFamily::create(
+                    registerLocaleList(testCase.fontLocales[i]), FamilyVariant::DEFAULT,
+                    std::move(fonts), false /* isCustomFallback */, false /* isDefaultFallback */);
             families.push_back(family);
             fontLocaleIdxMap.insert(std::make_pair(minikinFont.get(), i));
         }
