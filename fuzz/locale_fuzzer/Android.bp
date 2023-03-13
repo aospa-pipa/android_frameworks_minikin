@@ -33,7 +33,7 @@ package {
         "liblog",
         "libharfbuzz_ng",
         "libft2",
-        "libandroidicu",
+        "libicu",
         "libutils",
         "libz",
     ],

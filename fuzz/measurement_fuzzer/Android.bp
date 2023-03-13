@@ -34,7 +34,7 @@ cc_fuzz {
         "liblog",
         "libharfbuzz_ng",
         "libft2",
-        "libandroidicu",
+        "libicu",
         "libutils",
         "libz",
     ],
