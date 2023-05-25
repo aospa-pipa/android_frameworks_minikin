@@ -158,7 +158,6 @@ bool Hyphenator::isLineBreakingHyphen(uint32_t c) {
 EndHyphenEdit editForThisLine(HyphenationType type) {
     switch (type) {
         case HyphenationType::BREAK_AND_INSERT_HYPHEN:
-        case HyphenationType::BREAK_AND_INSERT_HYPHEN_AT_CURRENT_AND_NEXT_LINE:
             return EndHyphenEdit::INSERT_HYPHEN;
         case HyphenationType::BREAK_AND_INSERT_ARMENIAN_HYPHEN:
             return EndHyphenEdit::INSERT_ARMENIAN_HYPHEN;
@@ -179,7 +178,6 @@ EndHyphenEdit editForThisLine(HyphenationType type) {
 StartHyphenEdit editForNextLine(HyphenationType type) {
     switch (type) {
         case HyphenationType::BREAK_AND_INSERT_HYPHEN_AT_NEXT_LINE:
-        case HyphenationType::BREAK_AND_INSERT_HYPHEN_AT_CURRENT_AND_NEXT_LINE:
             return StartHyphenEdit::INSERT_HYPHEN;
         case HyphenationType::BREAK_AND_INSERT_HYPHEN_AND_ZWJ:
             return StartHyphenEdit::INSERT_ZWJ;
@@ -196,6 +194,25 @@ static UScriptCode getScript(uint32_t codePoint) {
         return script;
     } else {
         return USCRIPT_INVALID_CODE;
+    }
+}
+
+static HyphenationType hyphenationTypeBasedOnScript(uint32_t codePoint) {
+    // Note: It's not clear what the best hyphen for Hebrew is. While maqaf is the "correct" hyphen
+    // for Hebrew, modern practice may have shifted towards Western hyphens. We use normal hyphens
+    // for now to be safe.  BREAK_AND_INSERT_MAQAF is already implemented, so if we want to switch
+    // to maqaf for Hebrew, we can simply add a condition here.
+    const UScriptCode script = getScript(codePoint);
+    if (script == USCRIPT_KANNADA || script == USCRIPT_MALAYALAM || script == USCRIPT_TAMIL ||
+        script == USCRIPT_TELUGU) {
+        // Grantha is not included, since we don't support non-BMP hyphenation yet.
+        return HyphenationType::BREAK_AND_DONT_INSERT_HYPHEN;
+    } else if (script == USCRIPT_ARMENIAN) {
+        return HyphenationType::BREAK_AND_INSERT_ARMENIAN_HYPHEN;
+    } else if (script == USCRIPT_CANADIAN_ABORIGINAL) {
+        return HyphenationType::BREAK_AND_INSERT_UCAS_HYPHEN;
+    } else {
+        return HyphenationType::BREAK_AND_INSERT_HYPHEN;
     }
 }
 
@@ -227,27 +244,6 @@ static inline HyphenationType getHyphTypeForArabic(const U16StringPiece& word, s
     return HyphenationType::BREAK_AND_INSERT_HYPHEN;
 }
 
-HyphenationType Hyphenator::hyphenationTypeBasedOnScriptAndLocale(uint32_t codePoint) const {
-    // Note: It's not clear what the best hyphen for Hebrew is. While maqaf is the "correct" hyphen
-    // for Hebrew, modern practice may have shifted towards Western hyphens. We use normal hyphens
-    // for now to be safe.  BREAK_AND_INSERT_MAQAF is already implemented, so if we want to switch
-    // to maqaf for Hebrew, we can simply add a condition here.
-    const UScriptCode script = getScript(codePoint);
-    if (script == USCRIPT_KANNADA || script == USCRIPT_MALAYALAM || script == USCRIPT_TAMIL ||
-        script == USCRIPT_TELUGU) {
-        // Grantha is not included, since we don't support non-BMP hyphenation yet.
-        return HyphenationType::BREAK_AND_DONT_INSERT_HYPHEN;
-    } else if (script == USCRIPT_ARMENIAN) {
-        return HyphenationType::BREAK_AND_INSERT_ARMENIAN_HYPHEN;
-    } else if (script == USCRIPT_CANADIAN_ABORIGINAL) {
-        return HyphenationType::BREAK_AND_INSERT_UCAS_HYPHEN;
-    } else if (isRepeatHyphen(script, mHyphenationLocale)) {
-        return HyphenationType::BREAK_AND_INSERT_HYPHEN_AT_CURRENT_AND_NEXT_LINE;
-    } else {
-        return HyphenationType::BREAK_AND_INSERT_HYPHEN;
-    }
-}
-
 // Use various recommendations of UAX #14 Unicode Line Breaking Algorithm for hyphenating words
 // that didn't match patterns, especially words that contain hyphens or soft hyphens (See sections
 // 5.3, Use of Hyphen, and 5.4, Use of Soft Hyphen).
@@ -259,7 +255,9 @@ void Hyphenator::hyphenateWithNoPatterns(const U16StringPiece& word, Hyphenation
             // Break after hyphens, but only if they don't start the word.
 
             if ((prevChar == CHAR_HYPHEN_MINUS || prevChar == CHAR_HYPHEN) &&
-                isRepeatHyphen(getScript(word[i]), mHyphenationLocale)) {
+                (mHyphenationLocale == HyphenationLocale::POLISH ||
+                 mHyphenationLocale == HyphenationLocale::SLOVENIAN) &&
+                getScript(word[i]) == USCRIPT_LATIN) {
                 // In Polish and Slovenian, hyphens get repeated at the next line. To be safe,
                 // we will do this only if the next character is Latin.
                 out[i] = HyphenationType::BREAK_AND_INSERT_HYPHEN_AT_NEXT_LINE;
@@ -275,7 +273,7 @@ void Hyphenator::hyphenateWithNoPatterns(const U16StringPiece& word, Hyphenation
                 // actually join. If they don't, we'll just insert a normal hyphen.
                 out[i] = getHyphTypeForArabic(word, i);
             } else {
-                out[i] = hyphenationTypeBasedOnScriptAndLocale(word[i]);
+                out[i] = hyphenationTypeBasedOnScript(word[i]);
             }
         } else if (prevChar == CHAR_MIDDLE_DOT && mMinPrefix < i && i <= word.size() - mMinSuffix &&
                    ((word[i - 2] == 'l' && word[i] == 'l') ||
@@ -311,7 +309,7 @@ HyphenationType Hyphenator::alphabetLookup(uint16_t* alpha_codes,
                 return HyphenationType::DONT_BREAK;
             }
             if (result == HyphenationType::BREAK_AND_INSERT_HYPHEN) {
-                result = hyphenationTypeBasedOnScriptAndLocale(c);
+                result = hyphenationTypeBasedOnScript(c);
             }
             alpha_codes[i + 1] = code;
         }
@@ -334,7 +332,7 @@ HyphenationType Hyphenator::alphabetLookup(uint16_t* alpha_codes,
                 return HyphenationType::DONT_BREAK;
             }
             if (result == HyphenationType::BREAK_AND_INSERT_HYPHEN) {
-                result = hyphenationTypeBasedOnScriptAndLocale(c);
+                result = hyphenationTypeBasedOnScript(c);
             }
             alpha_codes[i + 1] = AlphabetTable1::value(entry);
         }
@@ -398,12 +396,6 @@ void Hyphenator::hyphenateFromCodes(const uint16_t* codes, size_t len, Hyphenati
         // Hyphenation opportunities happen when the hyphenation numbers are odd.
         out[i] = (buffer[i] & 1u) ? hyphenValue : HyphenationType::DONT_BREAK;
     }
-}
-
-bool Hyphenator::isRepeatHyphen(UScriptCode script,
-                                HyphenationLocale locale) const {
-    return script == USCRIPT_LATIN &&
-            (locale == HyphenationLocale::POLISH ||locale == HyphenationLocale::SLOVENIAN);
 }
 
 }  // namespace minikin
